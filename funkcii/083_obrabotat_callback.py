@@ -1470,7 +1470,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         set_state(context, "worker_message_user", queue_id=queue_id, chat_id=query.message.chat_id if query.message else None)
         await query.answer("Введите сообщение")
         if query.message:
-            await query.message.reply_text("Введите сообщение владельцу (текст или фото):")
+            await query.message.reply_text(
+                "\u0412\u0432\u0435\u0434\u0438\u0442\u0435\u0020\u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435\u0020\u0432\u043B\u0430\u0434\u0435\u043B\u044C\u0446\u0443\u0020\u0028\u0442\u0435\u043A\u0441\u0442\u0020\u0438\u043B\u0438\u0020\u0444\u043E\u0442\u043E\u0029\u002E\n\u041E\u0442\u0432\u0435\u0442\u044C\u0442\u0435\u0020\u043D\u0430\u0020\u044D\u0442\u043E\u0020\u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435\u002E",
+                reply_markup=ForceReply(selective=True),
+            )
         return
 
     if data.startswith("q:skip:"):
