@@ -33,6 +33,7 @@ from telegram import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardRemove,
+    ForceReply,
     InputFile,
 )
 from telegram.constants import ParseMode
