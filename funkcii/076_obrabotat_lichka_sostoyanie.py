@@ -6,6 +6,53 @@ async def handle_private_state(update: Update, context: ContextTypes.DEFAULT_TYP
     text = (update.message.text or update.message.caption or "").strip()
     conn = get_conn()
 
+    if name == "worker_message_user":
+        queue_id = state["data"].get("queue_id")
+        if not queue_id:
+            conn.close()
+            clear_state(context)
+            return
+        if not text and not update.message.photo:
+            conn.close()
+            await update.message.reply_text("Отправьте текст или фото для владельца.")
+            return
+        row = conn.execute(
+            "SELECT user_id, phone FROM queue_numbers WHERE id = ?",
+            (queue_id,),
+        ).fetchone()
+        conn.close()
+        if not row:
+            clear_state(context)
+            await update.message.reply_text("Номер не найден.")
+            return
+        phone_display = format_phone(row["phone"])
+        sent_ok = False
+        try:
+            if update.message.photo:
+                photo_id = update.message.photo[-1].file_id
+                caption = f"Сообщение от оператора по номеру {phone_display}"
+                if text:
+                    caption = f"{caption}\n{text}"
+                await context.bot.send_photo(
+                    chat_id=row["user_id"],
+                    photo=photo_id,
+                    caption=caption,
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id=row["user_id"],
+                    text=f"Сообщение от оператора по номеру {phone_display}:\n{text}",
+                )
+            sent_ok = True
+        except Exception as exc:
+            logger.warning("Failed to send message to owner: %s", exc)
+        clear_state(context)
+        if sent_ok:
+            await update.message.reply_text("✅ Сообщение отправлено владельцу.")
+        else:
+            await update.message.reply_text("Не удалось отправить владельцу. Попросите владельца написать боту /start.")
+        return
+
     if name == "submit_numbers":
         numbers = filter_kz_numbers(extract_numbers(text))
         if not numbers:

@@ -7,7 +7,8 @@ async def handle_group_worker_state(update: Update, context: ContextTypes.DEFAUL
     if not state or state.get("name") != "worker_message_user":
         return
     data = state.get("data", {})
-    if data.get("chat_id") != update.effective_chat.id:
+    expected_chat_id = data.get("chat_id")
+    if expected_chat_id and expected_chat_id != update.effective_chat.id:
         return
 
     queue_id = data.get("queue_id")
@@ -17,6 +18,10 @@ async def handle_group_worker_state(update: Update, context: ContextTypes.DEFAUL
 
     text_msg = update.message.text or update.message.caption or ""
     if not text_msg and not update.message.photo:
+        try:
+            await update.message.reply_text("Отправьте текст или фото для владельца.")
+        except Exception:
+            pass
         return
 
     conn = get_conn()
@@ -30,6 +35,7 @@ async def handle_group_worker_state(update: Update, context: ContextTypes.DEFAUL
         return
 
     phone_display = format_phone(row["phone"])
+    sent_ok = False
     try:
         if update.message.photo:
             photo_id = update.message.photo[-1].file_id
@@ -46,11 +52,15 @@ async def handle_group_worker_state(update: Update, context: ContextTypes.DEFAUL
                 chat_id=row["user_id"],
                 text=f"Сообщение от оператора по номеру {phone_display}:\n{text_msg}",
             )
-    except Exception:
-        pass
+        sent_ok = True
+    except Exception as exc:
+        logger.warning("Failed to send message to owner: %s", exc)
 
     clear_state(context)
     try:
-        await update.message.reply_text("✅ Сообщение отправлено владельцу.")
+        if sent_ok:
+            await update.message.reply_text("✅ Сообщение отправлено владельцу.")
+        else:
+            await update.message.reply_text("Не удалось отправить владельцу. Попросите владельца написать боту /start.")
     except Exception:
         pass
