@@ -6,6 +6,14 @@ async def handle_worker_code_reply(update: Update, context: ContextTypes.DEFAULT
     if not update.message.reply_to_message.from_user or not update.message.reply_to_message.from_user.is_bot:
         return
 
+    state = get_state(context)
+    if state and state.get("name") == "worker_message_user":
+        data = state.get("data", {})
+        expected_chat_id = data.get("chat_id")
+        if not expected_chat_id or expected_chat_id == update.effective_chat.id:
+            await handle_group_worker_state(update, context)
+            return
+
     reply_msg = update.message.reply_to_message
     conn = get_conn()
     row = conn.execute(
